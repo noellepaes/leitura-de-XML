@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload de Arquivo ZIP</title>
+</head>
+<body>
+    <h1>Upload de Arquivo ZIP</h1>
+    <form action="/api/cupons/processar" method="post" enctype="multipart/form-data">
+        <input type="file" name="arquivo" accept=".zip">
+        <button type="submit">Enviar</button>
+    </form>
+</body>
+</html>

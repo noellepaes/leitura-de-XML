@@ -15,7 +15,6 @@ import java.util.List;
 @Entity
 @Table(name = "cupom")
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Cupom {
