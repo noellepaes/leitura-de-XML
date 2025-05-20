@@ -1,7 +1,5 @@
 package com.noelle.leitura_de_XML.services;
 
-
-
 import com.noelle.leitura_de_XML.domain.Cupom;
 import com.noelle.leitura_de_XML.domain.Item;
 import com.noelle.leitura_de_XML.exception.ProcessamentoException;
@@ -34,30 +32,34 @@ public class ProcessadorXmlService {
     /**
      * Extrai os XMLs de um arquivo ZIP
      */
-    public List<String> extrairXmlsDoZip(byte[] conteudoZip) {
-        List<String> xmls = new ArrayList<>();
-        
-        try (ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(conteudoZip))) {
-            ZipEntry entry;
-            while ((entry = zipInputStream.getNextEntry()) != null) {
-                if (entry.getName().endsWith(".xml")) {
-                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                    byte[] buffer = new byte[1024];
-                    int len;
-                    while ((len = zipInputStream.read(buffer)) > 0) {
-                        outputStream.write(buffer, 0, len);
-                    }
-                    String xml = outputStream.toString("UTF-8");
-                    xmls.add(xml);
-                    log.debug("XML extraído: {}", entry.getName());
+   public List<String> extrairXmlsDoZip(byte[] conteudoZip) {
+    log.info("Iniciando extração de XMLs do arquivo ZIP, tamanho: {} bytes", conteudoZip.length);
+    List<String> xmls = new ArrayList<>();
+    
+    try (ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(conteudoZip))) {
+        ZipEntry entry;
+        while ((entry = zipInputStream.getNextEntry()) != null) {
+            if (entry.getName().endsWith(".xml")) {
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                byte[] buffer = new byte[1024];
+                int len;
+                while ((len = zipInputStream.read(buffer)) > 0) {
+                    outputStream.write(buffer, 0, len);
                 }
+                String xml = outputStream.toString("UTF-8");
+                xmls.add(xml);
+                log.debug("XML extraído: {}, tamanho: {} bytes", entry.getName(), xml.length());
             }
-        } catch (Exception e) {
-            throw new ProcessamentoException("Erro ao extrair XMLs do arquivo ZIP: " + e.getMessage(), e);
         }
-        
-        return xmls;
+        log.info("Extração concluída. Total de XMLs encontrados: {}", xmls.size());
+    } catch (Exception e) {
+        log.error("Erro ao extrair XMLs do arquivo ZIP: {}", e.getMessage(), e);
+        throw new ProcessamentoException("Erro ao extrair XMLs do arquivo ZIP: " + e.getMessage(), e);
     }
+    
+    return xmls;
+}
+
     
     /**
      * Processa um XML de CF-e SAT
@@ -92,17 +94,18 @@ public class ProcessadorXmlService {
             BigDecimal valorTotalCofins = new BigDecimal(getElementTextContent(icmsTot, "vCOFINS"));
             BigDecimal valorTotalOutros = new BigDecimal(getElementTextContent(icmsTot, "vOutro"));
             
-            Cupom cupom = Cupom.builder()
-                    .chaveAcesso(chaveAcesso)
-                    .numeroCfe(numeroCfe)
-                    .dataEmissao(dataEmissao)
-                    .valorTotalIcms(valorTotalIcms)
-                    .valorTotalProdutos(valorTotalProdutos)
-                    .valorTotalDescontos(valorTotalDescontos)
-                    .valorTotalPis(valorTotalPis)
-                    .valorTotalCofins(valorTotalCofins)
-                    .valorTotalOutros(valorTotalOutros)
-                    .build();
+            // Em vez de usar o Builder, crie uma instância diretamente
+        Cupom cupom = new Cupom();
+        cupom.setChaveAcesso(chaveAcesso);
+        cupom.setNumeroCfe(numeroCfe);
+        cupom.setDataEmissao(dataEmissao);
+        cupom.setValorTotalIcms(valorTotalIcms);
+        cupom.setValorTotalProdutos(valorTotalProdutos);
+        cupom.setValorTotalDescontos(valorTotalDescontos);
+        cupom.setValorTotalPis(valorTotalPis);
+        cupom.setValorTotalCofins(valorTotalCofins);
+        cupom.setValorTotalOutros(valorTotalOutros);
+        
             
             // Processa os itens
             NodeList detList = infCFe.getElementsByTagName("det");
@@ -116,7 +119,8 @@ public class ProcessadorXmlService {
                 String ncm = getElementTextContent(prod, "NCM");
                 String cfop = getElementTextContent(prod, "CFOP");
                 String unidadeMedida = getElementTextContent(prod, "uCom");
-                BigDecimal quantidade = new BigDecimal(getElementTextContent(prod, "qCom"));
+                // BigDecimal quantidade = new BigDecimal(getElementTextContent(prod, "qCom"));
+                BigDecimal quantidade = new BigDecimal(getElementTextContent(prod, "qCom", "0.00"));
                 BigDecimal valorUnitario = new BigDecimal(getElementTextContent(prod, "vUnCom"));
                 BigDecimal valorTotal = new BigDecimal(getElementTextContent(prod, "vProd"));
                 BigDecimal valorDesconto = new BigDecimal(getElementTextContent(prod, "vDesc", "0.00"));
@@ -135,15 +139,26 @@ public class ProcessadorXmlService {
                     for (int j = 0; j < icmsChildren.getLength(); j++) {
                         if (icmsChildren.item(j).getNodeType() == org.w3c.dom.Node.ELEMENT_NODE) {
                             Element icmsType = (Element) icmsChildren.item(j);
-                            cst = getElementTextContent(icmsType, "CST");
-                            aliquotaIcms = new BigDecimal(getElementTextContent(icmsType, "pICMS", "0.00"));
-                            valorIcms = new BigDecimal(getElementTextContent(icmsType, "vICMS", "0.00"));
+                            try {
+                                cst = getElementTextContent(icmsType, "CST", "");
+                            } catch (Exception e) {
+                                log.warn("CST não encontrado para o item {}", numeroSequencial);
+                            }
+                            try {
+                                aliquotaIcms = new BigDecimal(getElementTextContent(icmsType, "pICMS", "0.00"));
+                            } catch (Exception e) {
+                                log.warn("pICMS não encontrado para o item {}", numeroSequencial);
+                            }
+                            try {
+                                valorIcms = new BigDecimal(getElementTextContent(icmsType, "vICMS", "0.00"));
+                            } catch (Exception e) {
+                                log.warn("vICMS não encontrado para o item {}", numeroSequencial);
+                            }
                             break;
                         }
                     }
                 }
-                
-                // PIS
+                    // PIS
                 BigDecimal basePis = BigDecimal.ZERO;
                 BigDecimal aliquotaPis = BigDecimal.ZERO;
                 BigDecimal valorPis = BigDecimal.ZERO;
@@ -228,5 +243,20 @@ public class ProcessadorXmlService {
             return nodeList.item(0).getTextContent();
         }
         return defaultValue;
+    }
+    
+        /**
+     * Valida se o XML está bem formado antes de processá-lo
+     */
+    public boolean validarXml(String conteudoXml) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            builder.parse(new InputSource(new StringReader(conteudoXml)));
+            return true;
+        } catch (Exception e) {
+            log.warn("XML inválido: {}", e.getMessage());
+            return false;
+        }
     }
 }

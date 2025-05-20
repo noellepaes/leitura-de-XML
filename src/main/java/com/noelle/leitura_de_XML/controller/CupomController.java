@@ -15,6 +15,8 @@ import com.noelle.leitura_de_XML.domain.Cupom;
 import com.noelle.leitura_de_XML.dto.CupomDTO;
 import com.noelle.leitura_de_XML.mapper.CupomMapper;
 import com.noelle.leitura_de_XML.services.CupomService;
+import org.springframework.http.MediaType;
+
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,22 +33,23 @@ public class CupomController {
     private final CupomService cupomService;
     private final CupomMapper cupomMapper;
     
-    @PostMapping("/processar")
+   @PostMapping(value = "/processar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Processa um arquivo ZIP contendo XMLs de CF-e SAT")
     public ResponseEntity<String> processarArquivoZip(@RequestParam("arquivo") MultipartFile arquivo) {
-        try {
-            log.info("Recebido arquivo para processamento: {}", arquivo.getOriginalFilename());
-            byte[] conteudo = arquivo.getBytes();
-            int processados = cupomService.processarArquivoZip(conteudo);
-            return ResponseEntity.ok("Arquivo processado com sucesso. Total de cupons processados: " + processados);
-        } catch (IOException e) {
-            log.error("Erro ao ler arquivo: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Erro ao ler arquivo: " + e.getMessage());
-        } catch (Exception e) {
-            log.error("Erro ao processar arquivo: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Erro ao processar arquivo: " + e.getMessage());
-        }
+    try {
+        log.info("Recebido arquivo para processamento: {}", arquivo.getOriginalFilename());
+        byte[] conteudo = arquivo.getBytes();
+        int processados = cupomService.processarArquivoZip(conteudo);
+        return ResponseEntity.ok("Arquivo processado com sucesso. Total de cupons processados: " + processados);
+    } catch (IOException e) {
+        log.error("Erro ao ler arquivo: {}", e.getMessage(), e);
+        return ResponseEntity.badRequest().body("Erro ao ler arquivo: " + e.getMessage());
+    } catch (Exception e) {
+        log.error("Erro ao processar arquivo: {}", e.getMessage(), e);
+        return ResponseEntity.badRequest().body("Erro ao processar arquivo: " + e.getMessage());
     }
+}
+
     
     @GetMapping("/por-numero")
     @Operation(summary = "Lista todos os cupons ordenados pelo número do CF-e")
@@ -61,4 +64,28 @@ public class CupomController {
         List<Cupom> cupons = cupomService.listarPorValor();
         return ResponseEntity.ok(cupomMapper.toDtoList(cupons));
     }
+
+
+    // Adicione este método na classe CupomController
+    @PostMapping("/processar-xml-unico")
+    @Operation(summary = "Processa um único arquivo XML de CF-e SAT")
+    public ResponseEntity<String> processarXmlUnico(@RequestParam("caminho") String caminhoArquivo) {
+        try {
+            Cupom cupom = cupomService.processarXmlUnico(caminhoArquivo);
+            return ResponseEntity.ok("XML processado com sucesso. Chave de acesso: " + cupom.getChaveAcesso());
+        } catch (IOException e) {
+            log.error("Erro ao ler arquivo: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body("Erro ao ler arquivo: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Erro ao processar arquivo: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body("Erro ao processar arquivo: " + e.getMessage());
+        }
+
+    }
+
+    @GetMapping("/upload-form")
+    public String uploadForm() {
+        return "upload-form";
+    }   
+
 }

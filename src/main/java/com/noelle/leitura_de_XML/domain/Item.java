@@ -80,4 +80,5 @@ public class Item {
     
     @Column(name = "numero_sequencial", nullable = false)
     private Integer numeroSequencial;
+    
 }
