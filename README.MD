@@ -49,13 +49,9 @@ src/
 │   │                   ├── ZipExtractor.java
 │   │                   └── XmlUtils.java
 │   └── resources/
-│       ├── application.properties
-│       ├── application-dev.properties
-│       ├── application-prod.properties
-│       └── db/
-│           └── migration/
-│               ├── V1__criar_tabela_cupom.sql
-│               └── V2__criar_tabela_item.sql
+│       ├── static
+│           └── html
+│               
 └── test/
     └── java/
         └── com/
@@ -75,5 +71,5 @@ src/
 
 
 
-implementações: http://localhost:8080/api/cupons/processar
-
+implementações:  http://localhost:8080/upload-form.html
+http://localhost:8080/swagger-ui/index.html#/
